@@ -1,0 +1,28 @@
+git_repository(
+    name = "io_bazel_rules_rust",
+    remote = "https://github.com/acmcarther/rules_rust.git",
+    commit = "49a7345"
+)
+load("@io_bazel_rules_rust//rust:rust.bzl", "rust_repositories")
+
+local_repository(
+    name = "io_bazel_rules_raze",
+    path = "../../",
+)
+load("@io_bazel_rules_raze//raze:raze.bzl", "cargo_repositories", "raze_repositories", "raze_generate")
+
+rust_repositories()
+cargo_repositories()
+raze_repositories()
+
+local_repository(
+    name = "cargo_sources",
+    path = "./raze",
+)
+
+raze_generate(
+    name = "cargo_deps",
+    cargo_sources =  "@cargo_sources//:sources",
+    cargo_toml = "@cargo_sources//:Cargo.toml",
+    cargo_lock = "@cargo_sources//:Cargo.lock",
+)
