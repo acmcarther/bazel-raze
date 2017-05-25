@@ -3,62 +3,32 @@ A cargo-raze complementing Bazel rule set.
 
 ## Problem
 
-You've already read about [cargo-raze](https://github.com/acmcarther/cargo-raze), and would like to keep vendored sources out of your source tree, or defer generation of BUILD files to Bazel load time so that users can let Cargo orchestrate the right dependencies for their platform.
+You've already read about [cargo-raze](https://github.com/acmcarther/cargo-raze) and now have Cargo.bzl files and don't know what to do with them. `bazel-raze` knows what to do with them -- generate, link and build your cargo dependencies!
 
-## How it looks (speculative and untested)
+## How it looks
 
 In your Bazel WORKSPACE:
 ```python
-# On demand vendoring
-raze_vendor(
-  name = "cargo_sources",
-  cargo_toml = "//:Cargo.toml",
-  cargo_lock = "//:Cargo.lock",
+git_repository(
+    name = "io_bazel_rules_raze",
+    remote = "https://github.com/acmcarther/bazel-raze.git",
+    commit = "93dfb2a"
 )
 
-# Local (manual) vendoring
-new_local_workspace(
-    name = "local_cargo_sources"
-    path = __workspace_dir__ + "/cargo_sources"
-    build_file_content = """
-filegroup(
-    name = "sources",
-    srcs = glob(["**"]),
-    exclude_directories = 0,
+git_repository(
+    name = "io_bazel_rules_rust",
+    remote = "https://github.com/acmcarther/rules_rust.git",
+    commit = "49a7345"
 )
-"""
-)
+load("@io_bazel_rules_rust//rust:rust.bzl", "rust_repositories")
 
-# WORKSPACE + BUILD generation
-raze_generate(
-  name = "cargo_deps",
-  sources = ":cargo_sources",
-  #sources = "@local_cargo_sources:sources",
-  cargo_toml = "//:Cargo.toml",
-  cargo_lock = "//:Cargo.lock",
-)
+rust_repositories()
 ```
 
-In any new `rust_library`:
-```python
-load("@io_bazel_rules_rust//rust:rust.bzl", "rust_library",)
+Then, see the [example](examples/hello_cargo_library/README.md). Remember to replace references to `//raze:raze.bzl` with `@io_bazel_rules_raze//raze:raze.bzl`.
 
-rust_library(
-    name = "widget",
-    srcs = glob(["src/**/*.rs"]),
-    deps = [
-        "@cargo_deps//:libc",
-        "@cargo_deps//:bitflags",
-        "@cargo_deps//:log",
-        "@cargo_deps//:serde",
-    ],
-)
-```
+## How it works
 
-## How it works (soon!)
+These Bazel `raze` rules wrap [cargo-vendor](https://github.com/alexcrichton/cargo-vendor) and `cargo-raze` in a warm Bazel-y blanket that lets you automagically use Cargo's ecosystem with Bazel.
 
-These Bazel `raze` rules wrap [cargo-vendor](https://github.com/alexcrichton/cargo-vendor) and `cargo-raze` in a warm Bazel-y blanket that lets you automagically use Cargo's ecosystem with Bazel. This is the way cargo-raze is "meant" to be used.
-
-Using `cargo-vendor` and `cargo-raze`, Bazel performs Cargo dependency vendoring, and then supplements the dependencies with BUILD files. Either step can be perfomed manually, thereby "locking" either the sources or the BUILD rules for the whole project.
-
-One important note: BUILD files are specific to the platform that `cargo-raze` is executed on. If you wish continue to leverage Cargo's platform-specific dependency resolution, you will need to defer generation of the BUILD files.
+Using `cargo-vendor` and `cargo-raze`, Bazel performs Cargo dependency vendoring, and then supplements the dependencies with Cargo.bzl files. Those files can then be interpreted by bazel to generate `rust_library` rules that you can use as if you'd manually written them.
