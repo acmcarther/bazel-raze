@@ -1,4 +1,4 @@
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//examples/hello_cargo_library/vendor:__subpackages__"])
 
 load("//raze:raze.bzl", "cargo_library")
 load(":Cargo.bzl", "description")
